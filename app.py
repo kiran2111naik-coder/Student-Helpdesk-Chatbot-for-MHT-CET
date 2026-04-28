@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import re
-import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -78,7 +77,7 @@ def suggest_branch(p):
         return "🏗️ Civil / Other"
 
 # -------------------------------
-# CHATBOT FUNCTION (FIXED)
+# CHATBOT FUNCTION
 # -------------------------------
 def chatbot(user_input):
     text = user_input.lower()
@@ -101,10 +100,10 @@ def chatbot(user_input):
             if result.empty:
                 result = df.sort_values(by=col, ascending=False)
 
-            # 🔥 REMOVE DUPLICATES
+            # REMOVE DUPLICATES
             result = result.drop_duplicates(subset=["College", "Branch"])
 
-            # 🔥 SORT + LIMIT
+            # SORT & LIMIT
             result = result.sort_values(by=col, ascending=False).head(5)
 
             res = "🎯 Top Colleges:\n\n"
@@ -126,7 +125,7 @@ def chatbot(user_input):
     return faq_a[sim.argmax()]
 
 # -------------------------------
-# TREND GRAPH
+# TREND GRAPH (NO MATPLOTLIB)
 # -------------------------------
 def show_trend(college, branch, category):
     data = df[(df["College"] == college) & (df["Branch"] == branch)]
@@ -136,12 +135,8 @@ def show_trend(college, branch, category):
         st.warning("No data available")
         return
 
-    plt.figure()
-    plt.plot(data["Year"], data[category], marker='o')
-    plt.xlabel("Year")
-    plt.ylabel("Cutoff")
-    plt.title(f"{college} - {branch}")
-    st.pyplot(plt)
+    chart_data = data.set_index("Year")[category]
+    st.line_chart(chart_data)
 
 # -------------------------------
 # UI
@@ -189,7 +184,7 @@ elif menu == "Trend":
         show_trend(college, branch, category)
 
 # -------------------------------
-# CHATBOT (FINAL FIXED)
+# CHATBOT
 # -------------------------------
 elif menu == "Chatbot":
 
