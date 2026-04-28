@@ -56,11 +56,10 @@ def chatbot(user_input):
                 category = "ST"
 
             temp = df.copy()
-
             temp["gap"] = temp[category] - perc
             temp["score"] = abs(temp["gap"])
 
-            result = temp.sort_values("score").drop_duplicates("College").head(10)
+            result = temp.sort_values(["score", category]).drop_duplicates("College").head(10)
 
             res = "🎯 Top Colleges:\n\n"
             for _, row in result.iterrows():
@@ -99,7 +98,6 @@ def show_trend(college):
     chart = data.set_index("Branch")[["OPEN","OBC","SC","ST"]]
 
     st.bar_chart(chart)
-
     st.dataframe(data)
 
 # -------------------------------
@@ -107,16 +105,16 @@ def show_trend(college):
 # -------------------------------
 st.set_page_config(page_title="MHT CET App")
 
-st.title("🎓 MHT-CET Counselling App (FINAL STABLE)")
+st.title("🎓 MHT-CET Counselling App (FINAL AI-STYLE PREDICTOR)")
 
 menu = st.sidebar.selectbox("Menu", ["Predictor", "Trend", "Chatbot"])
 
 # -------------------------------
-# PREDICTOR (FULLY FIXED & EFFICIENT)
+# PREDICTOR (ULTRA IMPROVED VERSION)
 # -------------------------------
 if menu == "Predictor":
 
-    st.subheader("🎯 Smart College Predictor")
+    st.subheader("🎯 Smart Counselling Predictor (AI Logic)")
 
     perc = st.slider("Enter Percentile", 50, 100, 90)
     category = st.selectbox("Category", ["OPEN","OBC","SC","ST"])
@@ -126,20 +124,37 @@ if menu == "Predictor":
     if category not in temp.columns:
         category = "OPEN"
 
+    # -------------------------------
+    # SMART 3-ZONE SYSTEM
+    # -------------------------------
     temp["gap"] = temp[category] - perc
-    temp["score"] = abs(temp["gap"])
 
-    # SMART SORTING (REAL COUNSELLING STYLE)
-    result = temp.sort_values(
-        by=["score", category],
-        ascending=[True, False]
-    ).drop_duplicates("College")
+    safe_zone = temp[temp["gap"] <= -2].copy()
+    target_zone = temp[(temp["gap"] > -2) & (temp["gap"] <= 3)].copy()
+    dream_zone = temp[temp["gap"] > 3].copy()
+
+    safe_zone["score"] = abs(safe_zone["gap"]) * 0.5
+    target_zone["score"] = abs(target_zone["gap"]) * 1.0
+    dream_zone["score"] = abs(dream_zone["gap"]) * 1.5
+
+    safe_zone["priority"] = 1
+    target_zone["priority"] = 2
+    dream_zone["priority"] = 3
+
+    result = pd.concat([safe_zone, target_zone, dream_zone])
+
+    result = result.sort_values(
+        by=["priority", "score", category],
+        ascending=[True, True, False]
+    )
+
+    result = result.drop_duplicates("College")
 
     result = result.head(max(20, len(result)))
 
-    st.write("📊 Recommended Colleges (Smart Ranking System):")
+    st.write("📊 AI-Style Counselling Results:")
 
-    st.dataframe(result.drop(columns=["gap","score"]))
+    st.dataframe(result.drop(columns=["gap","score","priority"]))
 
     st.success(suggest_branch(perc))
 
