@@ -1,67 +1,24 @@
 import streamlit as st
 import pandas as pd
 import re
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
 # -------------------------------
-# BUILT-IN DATA
+# DATA (TOP COLLEGES SAMPLE)
 # -------------------------------
 def load_data():
     data = [
-        ["COEP Pune","Computer Engineering",2024,99.5,99.3,99.6,98.7,98.5,98.8,96.2,96.0,96.5,93.5,93.0,94.0],
-        ["COEP Pune","Mechanical Engineering",2024,97.2,97.0,97.5,95.8,95.5,96.0,92.1,91.8,92.5,89.0,88.5,89.5],
-        ["VJTI Mumbai","IT",2024,99.2,99.0,99.3,98.5,98.2,98.6,95.8,95.5,96.0,92.8,92.3,93.0],
-        ["SPIT Mumbai","Computer Engineering",2024,98.8,98.5,99.0,97.9,97.5,98.0,94.2,94.0,94.5,91.0,90.5,91.5],
-        ["PCCOE Pune","Computer Engineering",2024,97.5,97.2,97.8,96.0,95.8,96.2,92.5,92.0,93.0,89.5,89.0,90.0],
-        ["MIT WPU Pune","IT",2024,96.5,96.2,96.8,94.8,94.5,95.0,90.5,90.0,91.0,87.0,86.5,87.5],
-        ["DY Patil Pune","Computer Engineering",2024,95.8,95.5,96.0,94.0,93.5,94.5,89.5,89.0,90.0,85.5,85.0,86.0],
-        ["VIT Pune","IT",2024,97.8,97.5,98.0,96.5,96.0,97.0,93.5,93.0,94.0,90.5,90.0,91.0],
+        ["COEP Pune","Computer Engineering",2024,99.5,98.7,96.2,93.5],
+        ["VJTI Mumbai","IT",2024,99.2,98.5,95.8,92.8],
+        ["SPIT Mumbai","Computer Engineering",2024,98.8,97.9,94.2,91.0],
+        ["PCCOE Pune","Computer Engineering",2024,97.5,96.0,92.5,89.5],
+        ["MIT WPU Pune","IT",2024,96.5,94.8,90.5,87.0],
+        ["VIT Pune","IT",2024,97.8,96.5,93.5,90.5],
     ]
 
-    cols = ["College","Branch","Year","OPEN","OPEN_F","OPEN_M",
-            "OBC","OBC_F","OBC_M","SC","SC_F","SC_M","ST","ST_F","ST_M"]
-
+    cols = ["College","Branch","Year","OPEN","OBC","SC","ST"]
     return pd.DataFrame(data, columns=cols)
 
 df = load_data()
-
-# -------------------------------
-# DATA EXPANSION
-# -------------------------------
-def expand_data(df):
-    new_rows = []
-
-    cutoff_cols = ["OPEN","OPEN_F","OPEN_M","OBC","OBC_F","OBC_M",
-                   "SC","SC_F","SC_M","ST","ST_F","ST_M"]
-
-    for _, row in df.iterrows():
-        for delta in [-2, -1, 0, 1, 2]:
-            new_row = row.copy()
-
-            for col in cutoff_cols:
-                if col in df.columns:
-                    new_row[col] = max(50, min(100, row[col] + delta))
-
-            new_rows.append(new_row)
-
-    return pd.DataFrame(new_rows).drop_duplicates()
-
-df = expand_data(df)
-
-# -------------------------------
-# FAQ + NLP
-# -------------------------------
-faq_q = ["What is MHT CET?", "Eligibility?", "CAP round?", "Documents?"]
-faq_a = [
-    "MHT CET is an engineering entrance exam.",
-    "12th PCM required.",
-    "CAP is admission process.",
-    "Marksheets + CET scorecard required."
-]
-
-vectorizer = TfidfVectorizer()
-X = vectorizer.fit_transform(faq_q)
 
 # -------------------------------
 # BRANCH SUGGESTION
@@ -77,95 +34,85 @@ def suggest_branch(p):
         return "🏗️ Civil / Other"
 
 # -------------------------------
-# CHATBOT FUNCTION
+# CHATBOT (NO ML - SAFE VERSION)
 # -------------------------------
 def chatbot(user_input):
     text = user_input.lower()
 
-    if any(word in text for word in ["percentile", "%"]):
+    # Percentile logic
+    if "percentile" in text or "%" in text:
         try:
             perc = float(re.findall(r'\d+\.?\d*', text)[0])
 
             category = "OPEN"
-            if "obc" in text: category = "OBC"
-            elif "sc" in text: category = "SC"
-            elif "st" in text: category = "ST"
+            if "obc" in text:
+                category = "OBC"
+            elif "sc" in text:
+                category = "SC"
+            elif "st" in text:
+                category = "ST"
 
-            col = category
-            if "female" in text: col += "_F"
-            elif "male" in text: col += "_M"
+            if category not in df.columns:
+                category = "OPEN"
 
-            result = df[df[col] <= perc + 1]
+            result = df[df[category] <= perc + 1]
 
             if result.empty:
-                result = df.sort_values(by=col, ascending=False)
+                result = df.sort_values(by=category, ascending=False)
 
-            # REMOVE DUPLICATES
-            result = result.drop_duplicates(subset=["College", "Branch"])
+            result = result.drop_duplicates(subset=["College"])
+            result = result.sort_values(by=category, ascending=False).head(5)
 
-            # SORT & LIMIT
-            result = result.sort_values(by=col, ascending=False).head(5)
+            response = "🎯 Top Colleges:\n\n"
 
-            res = "🎯 Top Colleges:\n\n"
             for _, row in result.iterrows():
-                res += f"{row['College']} - {row['Branch']} ({row[col]}%)\n"
+                response += f"{row['College']} - {row['Branch']} ({row[category]}%)\n"
 
-            res += "\n🎯 Suggested Branch: " + suggest_branch(perc)
-            return res
+            response += "\n🎯 Suggested Branch: " + suggest_branch(perc)
+            return response
 
         except:
-            return "Enter like: 95 percentile OBC female"
+            return "Enter like: 95 percentile OBC"
 
-    vec = vectorizer.transform([user_input])
-    sim = cosine_similarity(vec, X)
-
-    if sim.max() < 0.4:
-        return "Ask about MHT CET or enter percentile like 95% OBC"
-
-    return faq_a[sim.argmax()]
-
-# -------------------------------
-# TREND GRAPH (NO MATPLOTLIB)
-# -------------------------------
-def show_trend(college, branch, category):
-    data = df[(df["College"] == college) & (df["Branch"] == branch)]
-    data = data.sort_values("Year")
-
-    if data.empty:
-        st.warning("No data available")
-        return
-
-    chart_data = data.set_index("Year")[category]
-    st.line_chart(chart_data)
+    # Simple FAQ
+    if "mht cet" in text:
+        return "MHT CET is engineering entrance exam in Maharashtra."
+    elif "eligibility" in text:
+        return "12th PCM required for MHT CET."
+    elif "cap" in text:
+        return "CAP is centralized admission process."
+    elif "document" in text:
+        return "You need marksheet, CET scorecard, ID proof."
+    else:
+        return "Ask about MHT CET or enter percentile like 95 OBC"
 
 # -------------------------------
 # UI
 # -------------------------------
 st.set_page_config(page_title="MHT CET App")
 
-st.title("🎓 MHT-CET Counselling App")
+st.title("🎓 MHT-CET Counselling App (Stable Version)")
 
-menu = st.sidebar.selectbox("Menu", ["Predictor", "Trend", "Chatbot"])
+menu = st.sidebar.selectbox("Menu", ["Predictor", "Chatbot"])
 
 # -------------------------------
 # PREDICTOR
 # -------------------------------
 if menu == "Predictor":
+
     perc = st.slider("Percentile", 50, 100, 90)
     category = st.selectbox("Category", ["OPEN","OBC","SC","ST"])
-    gender = st.selectbox("Gender", ["Neutral","Female","Male"])
 
-    col = category
-    if gender == "Female": col += "_F"
-    elif gender == "Male": col += "_M"
+    if category not in df.columns:
+        category = "OPEN"
 
-    result = df[df[col] <= perc + 1]
+    result = df[df[category] <= perc + 1]
 
     if result.empty:
-        result = df.sort_values(by=col, ascending=False)
+        result = df.sort_values(by=category, ascending=False)
 
-    result = result.drop_duplicates(subset=["College","Branch"])
-    result = result.sort_values(by=col, ascending=False).head(10)
+    result = result.drop_duplicates(subset=["College"])
+    result = result.sort_values(by=category, ascending=False).head(10)
 
     st.subheader("🎯 Top Colleges")
     st.dataframe(result)
@@ -173,22 +120,11 @@ if menu == "Predictor":
     st.success(suggest_branch(perc))
 
 # -------------------------------
-# TREND
-# -------------------------------
-elif menu == "Trend":
-    college = st.selectbox("College", df["College"].unique())
-    branch = st.selectbox("Branch", df["Branch"].unique())
-    category = st.selectbox("Category", ["OPEN","OBC","SC","ST"])
-
-    if st.button("Show Trend"):
-        show_trend(college, branch, category)
-
-# -------------------------------
-# CHATBOT
+# CHATBOT (FIXED)
 # -------------------------------
 elif menu == "Chatbot":
 
-    st.subheader("💬 MHT-CET Chatbot")
+    st.subheader("💬 Chatbot")
 
     if "chat" not in st.session_state:
         st.session_state.chat = []
@@ -196,10 +132,10 @@ elif menu == "Chatbot":
     user_input = st.chat_input("Type your message...")
 
     if user_input:
-        response = chatbot(user_input)
+        reply = chatbot(user_input)
 
         st.session_state.chat.append(("You", user_input))
-        st.session_state.chat.append(("Bot", response))
+        st.session_state.chat.append(("Bot", reply))
 
     for sender, msg in st.session_state.chat:
         if sender == "You":
