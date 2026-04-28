@@ -143,4 +143,4 @@ elif menu == "Chatbot":
                 st.write(msg)
         else:
             with st.chat_message("assistant"):
-                st.write(msg)
+                st.write(msg)             WHEN we deploy it on strreamlit trend model dissepair also prediction part not performing well
