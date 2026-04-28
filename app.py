@@ -56,9 +56,11 @@ def chatbot(user_input):
                 category = "ST"
 
             temp = df.copy()
-            temp["distance"] = abs(temp[category] - perc)
 
-            result = temp.sort_values(["distance", category]).drop_duplicates("College").head(10)
+            temp["gap"] = temp[category] - perc
+            temp["score"] = abs(temp["gap"])
+
+            result = temp.sort_values("score").drop_duplicates("College").head(10)
 
             res = "🎯 Top Colleges:\n\n"
             for _, row in result.iterrows():
@@ -82,7 +84,7 @@ def chatbot(user_input):
         return "Ask about MHT CET or enter percentile like 95 OBC"
 
 # -------------------------------
-# TREND SECTION
+# TREND
 # -------------------------------
 def show_trend(college):
 
@@ -105,34 +107,39 @@ def show_trend(college):
 # -------------------------------
 st.set_page_config(page_title="MHT CET App")
 
-st.title("🎓 MHT-CET Counselling App (FINAL STABLE SYSTEM)")
+st.title("🎓 MHT-CET Counselling App (FINAL STABLE)")
 
 menu = st.sidebar.selectbox("Menu", ["Predictor", "Trend", "Chatbot"])
 
 # -------------------------------
-# PREDICTOR (FINAL STABLE + 20+ RESULTS)
+# PREDICTOR (FULLY FIXED & EFFICIENT)
 # -------------------------------
 if menu == "Predictor":
 
-    st.subheader("🎯 College Predictor (Stable 20+ Results)")
+    st.subheader("🎯 Smart College Predictor")
 
     perc = st.slider("Enter Percentile", 50, 100, 90)
     category = st.selectbox("Category", ["OPEN","OBC","SC","ST"])
 
     temp = df.copy()
 
-    temp["distance"] = abs(temp[category] - perc)
+    if category not in temp.columns:
+        category = "OPEN"
 
-    result = temp.sort_values(["distance", category])
+    temp["gap"] = temp[category] - perc
+    temp["score"] = abs(temp["gap"])
 
-    result = result.drop_duplicates("College")
+    # SMART SORTING (REAL COUNSELLING STYLE)
+    result = temp.sort_values(
+        by=["score", category],
+        ascending=[True, False]
+    ).drop_duplicates("College")
 
-    # 🔥 ALWAYS SHOW MINIMUM 20 (or all if less)
     result = result.head(max(20, len(result)))
 
-    st.write("📊 Recommended Colleges:")
+    st.write("📊 Recommended Colleges (Smart Ranking System):")
 
-    st.dataframe(result.drop(columns=["distance"]))
+    st.dataframe(result.drop(columns=["gap","score"]))
 
     st.success(suggest_branch(perc))
 
