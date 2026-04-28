@@ -51,15 +51,16 @@ def chatbot(user_input):
             elif "st" in text:
                 category = "ST"
 
-            result = df[df[category] <= perc]
+            # fallback safety
+            if category not in df.columns:
+                category = "OPEN"
 
-            if result.empty:
-                result = df.sort_values(by=category, ascending=False)
-
+            df["diff"] = abs(df[category] - perc)
+            result = df.sort_values("diff").head(5)
             result = result.drop_duplicates(subset=["College"])
-            result = result.sort_values(by=category, ascending=False).head(5)
 
-            res = "🎯 Top Colleges:\n\n"
+            res = "🎯 Top Colleges (Best Match):\n\n"
+
             for _, row in result.iterrows():
                 res += f"{row['College']} - {row['Branch']} ({row[category]}%)\n"
 
@@ -81,11 +82,11 @@ def chatbot(user_input):
         return "Ask about MHT CET or enter percentile like 95 OBC"
 
 # -------------------------------
-# TREND FUNCTION (FIXED & SAFE)
+# TREND (FIXED & STABLE)
 # -------------------------------
 def show_trend(college):
 
-    st.write("📊 Loading trend data...")
+    st.subheader(f"📊 Trend Analysis - {college}")
 
     data = df[df["College"] == college]
 
@@ -93,11 +94,9 @@ def show_trend(college):
         st.warning("No data available")
         return
 
-    st.subheader(f"📈 Cutoff Trend - {college}")
+    chart = data.set_index("Branch")[["OPEN","OBC","SC","ST"]]
 
-    chart_data = data.set_index("Branch")[["OPEN","OBC","SC","ST"]]
-
-    st.bar_chart(chart_data)
+    st.bar_chart(chart)
 
     st.dataframe(data)
 
@@ -106,44 +105,45 @@ def show_trend(college):
 # -------------------------------
 st.set_page_config(page_title="MHT CET App")
 
-st.title("🎓 MHT-CET Counselling App (FULL FIXED VERSION)")
+st.title("🎓 MHT-CET Counselling App (FINAL STABLE VERSION)")
 
 menu = st.sidebar.selectbox("Menu", ["Predictor", "Trend", "Chatbot"])
 
 # -------------------------------
-# PREDICTOR
+# PREDICTOR (FIXED DYNAMIC LOGIC)
 # -------------------------------
 if menu == "Predictor":
 
-    perc = st.slider("Percentile", 50, 100, 90)
+    st.subheader("🎯 College Predictor")
+
+    perc = st.slider("Enter Percentile", 50, 100, 90)
     category = st.selectbox("Category", ["OPEN","OBC","SC","ST"])
 
-    result = df[df[category] <= perc]
+    if category not in df.columns:
+        category = "OPEN"
 
-    if result.empty:
-        result = df.sort_values(by=category, ascending=False)
+    # 🔥 SMART MATCHING LOGIC (FIXED)
+    df["diff"] = abs(df[category] - perc)
 
+    result = df.sort_values("diff").head(10)
     result = result.drop_duplicates(subset=["College"])
-    result = result.sort_values(by=category, ascending=False).head(10)
 
-    st.subheader("🎯 Top Colleges")
-    st.dataframe(result)
+    st.write("📊 Best Matching Colleges Based on Your Score:")
+
+    st.dataframe(result.drop(columns=["diff"]))
 
     st.success(suggest_branch(perc))
 
 # -------------------------------
-# TREND (NOW FULLY FIXED & ALWAYS VISIBLE)
+# TREND
 # -------------------------------
 elif menu == "Trend":
 
-    st.subheader("📊 Trend Analysis Section")
-
-    st.write("Select a college to view cutoff trends:")
+    st.subheader("📊 Trend Section")
 
     college = st.selectbox("Select College", df["College"].unique())
 
     if st.button("Show Trend"):
-
         show_trend(college)
 
 # -------------------------------
