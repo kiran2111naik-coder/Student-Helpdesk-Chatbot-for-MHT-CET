@@ -13,6 +13,10 @@ def load_data():
         ["PCCOE Pune","Computer Engineering",2024,97.5,96.0,92.5,89.5],
         ["MIT WPU Pune","IT",2024,96.5,94.8,90.5,87.0],
         ["VIT Pune","IT",2024,97.8,96.5,93.5,90.5],
+        ["DY Patil Pune","IT",2024,95.8,94.0,90.0,85.5],
+        ["Sinhgad Pune","Computer Engineering",2024,94.5,92.0,88.5,84.0],
+        ["AISSMS Pune","IT",2024,93.0,90.5,86.0,82.0],
+        ["NIT Nagpur","Computer Engineering",2024,98.0,96.5,93.0,90.0],
     ]
 
     cols = ["College","Branch","Year","OPEN","OBC","SC","ST"]
@@ -51,16 +55,12 @@ def chatbot(user_input):
             elif "st" in text:
                 category = "ST"
 
-            # fallback safety
-            if category not in df.columns:
-                category = "OPEN"
+            temp = df.copy()
+            temp["distance"] = abs(temp[category] - perc)
 
-            df["diff"] = abs(df[category] - perc)
-            result = df.sort_values("diff").head(5)
-            result = result.drop_duplicates(subset=["College"])
+            result = temp.sort_values(["distance", category]).drop_duplicates("College").head(10)
 
-            res = "🎯 Top Colleges (Best Match):\n\n"
-
+            res = "🎯 Top Colleges:\n\n"
             for _, row in result.iterrows():
                 res += f"{row['College']} - {row['Branch']} ({row[category]}%)\n"
 
@@ -82,7 +82,7 @@ def chatbot(user_input):
         return "Ask about MHT CET or enter percentile like 95 OBC"
 
 # -------------------------------
-# TREND (FIXED & STABLE)
+# TREND SECTION
 # -------------------------------
 def show_trend(college):
 
@@ -105,32 +105,34 @@ def show_trend(college):
 # -------------------------------
 st.set_page_config(page_title="MHT CET App")
 
-st.title("🎓 MHT-CET Counselling App (FINAL STABLE VERSION)")
+st.title("🎓 MHT-CET Counselling App (FINAL STABLE SYSTEM)")
 
 menu = st.sidebar.selectbox("Menu", ["Predictor", "Trend", "Chatbot"])
 
 # -------------------------------
-# PREDICTOR (FIXED DYNAMIC LOGIC)
+# PREDICTOR (FINAL STABLE + 20+ RESULTS)
 # -------------------------------
 if menu == "Predictor":
 
-    st.subheader("🎯 College Predictor")
+    st.subheader("🎯 College Predictor (Stable 20+ Results)")
 
     perc = st.slider("Enter Percentile", 50, 100, 90)
     category = st.selectbox("Category", ["OPEN","OBC","SC","ST"])
 
-    if category not in df.columns:
-        category = "OPEN"
+    temp = df.copy()
 
-    # 🔥 SMART MATCHING LOGIC (FIXED)
-    df["diff"] = abs(df[category] - perc)
+    temp["distance"] = abs(temp[category] - perc)
 
-    result = df.sort_values("diff").head(10)
-    result = result.drop_duplicates(subset=["College"])
+    result = temp.sort_values(["distance", category])
 
-    st.write("📊 Best Matching Colleges Based on Your Score:")
+    result = result.drop_duplicates("College")
 
-    st.dataframe(result.drop(columns=["diff"]))
+    # 🔥 ALWAYS SHOW MINIMUM 20 (or all if less)
+    result = result.head(max(20, len(result)))
+
+    st.write("📊 Recommended Colleges:")
+
+    st.dataframe(result.drop(columns=["distance"]))
 
     st.success(suggest_branch(perc))
 
