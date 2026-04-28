@@ -51,9 +51,6 @@ def chatbot(user_input):
             elif "st" in text:
                 category = "ST"
 
-            if category not in df.columns:
-                category = "OPEN"
-
             result = df[df[category] <= perc]
 
             if result.empty:
@@ -84,24 +81,32 @@ def chatbot(user_input):
         return "Ask about MHT CET or enter percentile like 95 OBC"
 
 # -------------------------------
-# TREND DATA (SIMPLE SIMULATION)
+# TREND FUNCTION (FIXED & SAFE)
 # -------------------------------
 def show_trend(college):
-    sample = df[df["College"] == college].copy()
 
-    if sample.empty:
-        st.warning("No data")
+    st.write("📊 Loading trend data...")
+
+    data = df[df["College"] == college]
+
+    if data.empty:
+        st.warning("No data available")
         return
 
-    sample = sample.set_index("Branch")[["OPEN","OBC","SC","ST"]]
-    st.bar_chart(sample)
+    st.subheader(f"📈 Cutoff Trend - {college}")
+
+    chart_data = data.set_index("Branch")[["OPEN","OBC","SC","ST"]]
+
+    st.bar_chart(chart_data)
+
+    st.dataframe(data)
 
 # -------------------------------
 # UI
 # -------------------------------
 st.set_page_config(page_title="MHT CET App")
 
-st.title("🎓 MHT-CET Counselling App (FIXED VERSION)")
+st.title("🎓 MHT-CET Counselling App (FULL FIXED VERSION)")
 
 menu = st.sidebar.selectbox("Menu", ["Predictor", "Trend", "Chatbot"])
 
@@ -112,9 +117,6 @@ if menu == "Predictor":
 
     perc = st.slider("Percentile", 50, 100, 90)
     category = st.selectbox("Category", ["OPEN","OBC","SC","ST"])
-
-    if category not in df.columns:
-        category = "OPEN"
 
     result = df[df[category] <= perc]
 
@@ -130,13 +132,18 @@ if menu == "Predictor":
     st.success(suggest_branch(perc))
 
 # -------------------------------
-# TREND (RESTORED)
+# TREND (NOW FULLY FIXED & ALWAYS VISIBLE)
 # -------------------------------
 elif menu == "Trend":
+
+    st.subheader("📊 Trend Analysis Section")
+
+    st.write("Select a college to view cutoff trends:")
 
     college = st.selectbox("Select College", df["College"].unique())
 
     if st.button("Show Trend"):
+
         show_trend(college)
 
 # -------------------------------
