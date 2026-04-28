@@ -3,7 +3,7 @@ import pandas as pd
 import re
 
 # -------------------------------
-# DATA (TOP COLLEGES SAMPLE)
+# DATA
 # -------------------------------
 def load_data():
     data = [
@@ -34,12 +34,11 @@ def suggest_branch(p):
         return "🏗️ Civil / Other"
 
 # -------------------------------
-# CHATBOT (NO ML - SAFE VERSION)
+# CHATBOT
 # -------------------------------
 def chatbot(user_input):
     text = user_input.lower()
 
-    # Percentile logic
     if "percentile" in text or "%" in text:
         try:
             perc = float(re.findall(r'\d+\.?\d*', text)[0])
@@ -55,7 +54,7 @@ def chatbot(user_input):
             if category not in df.columns:
                 category = "OPEN"
 
-            result = df[df[category] <= perc + 1]
+            result = df[df[category] <= perc]
 
             if result.empty:
                 result = df.sort_values(by=category, ascending=False)
@@ -63,37 +62,48 @@ def chatbot(user_input):
             result = result.drop_duplicates(subset=["College"])
             result = result.sort_values(by=category, ascending=False).head(5)
 
-            response = "🎯 Top Colleges:\n\n"
-
+            res = "🎯 Top Colleges:\n\n"
             for _, row in result.iterrows():
-                response += f"{row['College']} - {row['Branch']} ({row[category]}%)\n"
+                res += f"{row['College']} - {row['Branch']} ({row[category]}%)\n"
 
-            response += "\n🎯 Suggested Branch: " + suggest_branch(perc)
-            return response
+            res += "\n🎯 Suggested Branch: " + suggest_branch(perc)
+            return res
 
         except:
             return "Enter like: 95 percentile OBC"
 
-    # Simple FAQ
     if "mht cet" in text:
         return "MHT CET is engineering entrance exam in Maharashtra."
     elif "eligibility" in text:
-        return "12th PCM required for MHT CET."
+        return "12th PCM required."
     elif "cap" in text:
         return "CAP is centralized admission process."
     elif "document" in text:
-        return "You need marksheet, CET scorecard, ID proof."
+        return "Marksheets + CET scorecard required."
     else:
         return "Ask about MHT CET or enter percentile like 95 OBC"
+
+# -------------------------------
+# TREND DATA (SIMPLE SIMULATION)
+# -------------------------------
+def show_trend(college):
+    sample = df[df["College"] == college].copy()
+
+    if sample.empty:
+        st.warning("No data")
+        return
+
+    sample = sample.set_index("Branch")[["OPEN","OBC","SC","ST"]]
+    st.bar_chart(sample)
 
 # -------------------------------
 # UI
 # -------------------------------
 st.set_page_config(page_title="MHT CET App")
 
-st.title("🎓 MHT-CET Counselling App (Stable Version)")
+st.title("🎓 MHT-CET Counselling App (FIXED VERSION)")
 
-menu = st.sidebar.selectbox("Menu", ["Predictor", "Chatbot"])
+menu = st.sidebar.selectbox("Menu", ["Predictor", "Trend", "Chatbot"])
 
 # -------------------------------
 # PREDICTOR
@@ -106,7 +116,7 @@ if menu == "Predictor":
     if category not in df.columns:
         category = "OPEN"
 
-    result = df[df[category] <= perc + 1]
+    result = df[df[category] <= perc]
 
     if result.empty:
         result = df.sort_values(by=category, ascending=False)
@@ -120,7 +130,17 @@ if menu == "Predictor":
     st.success(suggest_branch(perc))
 
 # -------------------------------
-# CHATBOT (FIXED)
+# TREND (RESTORED)
+# -------------------------------
+elif menu == "Trend":
+
+    college = st.selectbox("Select College", df["College"].unique())
+
+    if st.button("Show Trend"):
+        show_trend(college)
+
+# -------------------------------
+# CHATBOT
 # -------------------------------
 elif menu == "Chatbot":
 
@@ -143,4 +163,4 @@ elif menu == "Chatbot":
                 st.write(msg)
         else:
             with st.chat_message("assistant"):
-                st.write(msg)             
+                st.write(msg)
